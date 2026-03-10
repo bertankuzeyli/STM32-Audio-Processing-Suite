@@ -1,0 +1,2 @@
+../Core/Src/anc_analysis.c:20:6:ANC_Analysis_Init	1
+../Core/Src/anc_analysis.c:32:6:Find_Dominant_Freq	2

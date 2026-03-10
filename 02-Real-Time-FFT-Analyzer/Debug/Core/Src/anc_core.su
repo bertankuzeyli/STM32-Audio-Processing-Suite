@@ -1,0 +1,4 @@
+../Core/Src/anc_core.c:49:24:xorshift32	16	static
+../Core/Src/anc_core.c:64:6:ANC_Core_Init	24	static
+../Core/Src/anc_core.c:91:6:ANC_Cycle_Handler	24	static
+../Core/Src/anc_core.c:141:6:process_audio_block	72	static
