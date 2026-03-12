@@ -1,0 +1,114 @@
+# ============================================================================
+# STM32 Audio Processing Suite - Professional Git Ignore File
+# ============================================================================
+
+# ============================================================================
+# Build Output Directories (Recursive - works for all subprojects)
+# ============================================================================
+**/Debug/
+**/Release/
+**/Build/
+
+# ============================================================================
+# Object and Binary Files
+# ============================================================================
+*.o
+*.obj
+*.elf
+*.bin
+*.hex
+*.map
+*.lst
+*.su
+*.d
+*.list
+*.stackdump
+
+# ============================================================================
+# STM32CubeIDE Settings (KEEP .project and .cproject for IDE compatibility!)
+# ============================================================================
+# NOTE: .project and .cproject are REQUIRED for STM32CubeIDE to recognize the project
+# Only ignore IDE-specific settings and temporary files
+**/.settings/
+.mxproject
+
+# ============================================================================
+# STM32CubeIDE Workspace Files (Never commit workspace metadata)
+# ============================================================================
+**/.metadata/
+**/RemoteSystemsTempFiles/
+
+# ============================================================================
+# STM32CubeMX Generated Backups
+# ============================================================================
+*.ioc.bak
+
+# ============================================================================
+# Launch Configuration Files (Optional - can be committed if needed)
+# ============================================================================
+*.launch
+
+# ============================================================================
+# Other IDE Files
+# ============================================================================
+.vscode/
+.idea/
+*.code-workspace
+
+# ============================================================================
+# OS-Specific Files
+# ============================================================================
+
+# Windows
+Thumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+*.lnk
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+
+# Linux
+*~
+.directory
+.Trash-*
+
+# ============================================================================
+# Temporary and Backup Files
+# ============================================================================
+*.tmp
+*.temp
+*.bak
+*.swp
+*.swo
+*~
+
+# ============================================================================
+# Log Files
+# ============================================================================
+*.log
+
+# ============================================================================
+# Documentation Build Outputs
+# ============================================================================
+html/
+latex/
+
+# ============================================================================
+# CRITICAL: Files TO INCLUDE (Not Ignored)
+# ============================================================================
+# ✅ .project - REQUIRED for STM32CubeIDE project recognition
+# ✅ .cproject - REQUIRED for STM32CubeIDE build configuration
+# ✅ Source code (.c, .h files in Core/Src and Core/Inc)
+# ✅ STM32CubeMX configuration (.ioc files)
+# ✅ Linker scripts (*.ld files)
+# ✅ Startup files (*.s files)
+# ✅ HAL Drivers (Drivers/STM32H7xx_HAL_Driver/)
+# ✅ CMSIS (Drivers/CMSIS/)
+# ✅ Middlewares (if custom or modified)
+# ✅ USB_DEVICE configuration
+# ✅ README.md, LICENSE, documentation
+# ============================================================================
