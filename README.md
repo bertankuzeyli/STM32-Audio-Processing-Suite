@@ -10,12 +10,13 @@ A collection of professional-grade audio processing projects for STM32H7 microco
 
 ## 🎯 Project Overview
 
-This repository contains multiple audio processing projects demonstrating:
+This repository contains three complete audio processing projects demonstrating:
 - **Real-time signal processing** using ARM CMSIS-DSP
-- **High-performance I2S audio acquisition** at 32kHz/24-bit
+- **High-performance I2S audio acquisition** at 48kHz/24-bit
 - **DMA-based zero-copy buffer management** for continuous streaming
 - **FFT-based frequency analysis** with live visualization
-- **Professional embedded software architecture**
+- **Adaptive noise cancellation** using the FxLMS algorithm
+- **Professional modular embedded software architecture**
 
 ---
 
@@ -24,37 +25,80 @@ This repository contains multiple audio processing projects demonstrating:
 ```
 STM32-Audio-Processing-Suite/
 │
-├── 02-Real-Time-FFT-Analyzer/     ✅ Available
+├── 01-Audio-Gain-Booster/         ✅ Complete
+│   └── Real-time digital amplification with automatic gain control
+│
+├── 02-Real-Time-FFT-Analyzer/     ✅ Complete
 │   └── Real-time spectrum analysis with ITM telemetry
 │
-├── 01-Audio-Gain-Booster/         🚧 Coming Soon
-│   └── Digital audio amplification with normalization
-│
-└── 03-Active-Noise-Cancellation/  🚧 Coming Soon
-    └── Adaptive filtering for ANC applications
+└── 03-Active-Noise-Cancellation/  ✅ Complete
+    └── Adaptive FxLMS noise cancellation with FFT frequency locking
 ```
 
 ---
 
-## 🚀 Featured Project: Real-Time FFT Analyzer
+## 🚀 Project 01 — Audio Gain Booster
 
-A high-performance audio spectrum analyzer that processes audio in real-time and provides frequency band analysis.
+A real-time audio amplifier that captures microphone input, removes DC offset, and applies automatic gain control before outputting to a DAC.
+
+### Key Features:
+- ⚡ **Ultra-low latency**: 8 samples per block (~166μs at 48kHz)
+- 🔇 **DC offset removal** via exponential moving average filter
+- 📈 **Automatic Gain Control (AGC)**: up to 10× gain with peak limiting
+- 🔁 **Ping-pong DMA buffering** for zero-gap audio streaming
+- 📡 **Optional USB CDC streaming** for PC-side monitoring
+
+### Performance Metrics:
+- **Processing Time**: ~100–150μs per block
+- **CPU Usage**: ~28% at 550MHz
+- **Sample Rate**: 48kHz
+- **Block Latency**: ~166μs
+
+[➡️ View Full Documentation](01-Audio-Gain-Booster/README.md)
+
+---
+
+## 🚀 Project 02 — Real-Time FFT Analyzer
+
+A high-performance audio spectrum analyzer that processes audio in real-time and provides frequency band analysis via ITM telemetry.
 
 ### Key Features:
 - ⚡ **256-point FFT** using ARM CMSIS-DSP (hardware-optimized)
-- 🎚️ **Frequency band analysis**: Bass (0-1kHz), Mid (1-4kHz), High (4-10kHz)
+- 🎚️ **Frequency band analysis**: Bass (0–1kHz), Mid (1–4kHz), High (4–10kHz)
 - 📊 **Live monitoring** via ITM (Instrumentation Trace Macrocell)
 - 🔊 **Peak and RMS level detection**
 - 🎛️ **DC offset removal** with high-pass filtering
 - 📈 **Hamming windowing** for spectral leakage reduction
 
 ### Performance Metrics:
-- **Processing Time**: ~2-3ms per FFT frame
-- **CPU Usage**: <50% at 480MHz
+- **Processing Time**: ~2–3ms per FFT frame
+- **CPU Usage**: <50% at 550MHz
 - **Sample Rate**: 32kHz
 - **Frequency Resolution**: 125Hz per bin
 
 [➡️ View Full Documentation](02-Real-Time-FFT-Analyzer/README.md)
+
+---
+
+## 🚀 Project 03 — Active Noise Cancellation (ANC)
+
+A complete adaptive noise cancellation system using the FxLMS algorithm. The system automatically calibrates the secondary path, locks onto dominant noise frequencies via FFT analysis, and generates anti-noise in real time.
+
+### Key Features:
+- 🧠 **FxLMS adaptive filter** with secondary path modeling
+- 🔍 **Automatic frequency locking** via FFT dominant frequency detection
+- 🔧 **3-phase operation**: Warm-up → Calibration → Active ANC
+- 🛡️ **Safety clamping** to prevent filter coefficient explosion
+- 📡 **SWV/ITM live reporting** for real-time state monitoring
+- 🔄 **Modular architecture**: separate DSP, analysis, and core modules
+
+### Performance Metrics:
+- **Processing Time**: ~150–200μs per block
+- **Sample Rate**: 48kHz
+- **Filter Length**: Configurable (ANC_FILTER_LENGTH)
+- **Calibration Duration**: ~2.67 seconds (128000 samples)
+
+[➡️ View Full Documentation](03-Active-Noise-Cancellation/README.md)
 
 ---
 
@@ -64,16 +108,22 @@ A high-performance audio spectrum analyzer that processes audio in real-time and
 - **STM32H723ZG** (Cortex-M7 @ 550MHz)
 - 1MB Flash, 564KB RAM
 - Hardware FPU for DSP operations
+- DTCM RAM for latency-critical variables
 
 ### Peripherals Used:
-- **I2S1** - Audio input interface (Master RX mode)
-- **DMA1** - Circular buffer management
-- **USB** - Virtual COM port (optional)
-- **ITM** - Real-time data streaming to debugger
+| Peripheral | Role |
+|-----------|------|
+| I2S1 | Audio input – Microphone RX |
+| I2S3 | Audio output – DAC TX |
+| DMA1 | Circular buffer management |
+| USB FS/HS | Virtual COM port (optional) |
+| ITM/SWV | Real-time telemetry to debugger |
+| USART3 | COM1 serial output |
 
 ### External Components:
-- I2S Microphone (24-bit) or Audio Codec
-- ST-LINK/V3 debugger (for ITM support)
+- I2S MEMS Microphone (24-bit): INMP441, ICS-43434, SPH0645
+- I2S DAC Module: PCM5102A, UDA1334A, MAX98357A
+- ST-LINK/V3 debugger (required for ITM/SWV)
 
 ---
 
@@ -87,7 +137,7 @@ A high-performance audio spectrum analyzer that processes audio in real-time and
 ### Optional Tools:
 - **Serial Wire Viewer (SWV)** for ITM data visualization
 - **STM Studio** for real-time variable plotting
-- **MATLAB/Python** for offline analysis
+- **Python / MATLAB** for offline audio analysis
 
 ---
 
@@ -99,82 +149,44 @@ git clone https://github.com/YourUsername/STM32-Audio-Processing-Suite.git
 cd STM32-Audio-Processing-Suite
 ```
 
-### 2. Open in STM32CubeIDE:
+### 2. Open a Project in STM32CubeIDE:
 ```
 File → Open Projects from File System
-Select: 02-Real-Time-FFT-Analyzer
+Select the desired project folder (e.g. 03-Active-Noise-Cancellation)
 ```
 
 ### 3. Build and Flash:
 ```
-Project → Build All (Ctrl+B)
-Run → Debug (F11)
+Project → Build All  (Ctrl+B)
+Run → Debug          (F11)
 ```
 
-### 4. Enable ITM Monitoring:
+### 4. Enable SWV Monitoring (for Projects 02 and 03):
 ```
-Debug Configuration → Debugger → Serial Wire Viewer (SWV)
+Debug Configuration → Debugger → Enable Serial Wire Viewer (SWV)
+Core Clock: 550 MHz
+Window → Show View → SWV → SWV ITM Data Console
 Enable ITM Stimulus Ports 1-5
-Window → Show View → SWV → Data Trace Timeline Graph
 ```
-
----
-
-## 📊 Live Variable Monitoring
-
-Add these variables to the **Live Expressions** window in STM32CubeIDE:
-
-| Variable | Description | Range |
-|----------|-------------|-------|
-| `live_bass_level` | Bass frequencies (0-1kHz) | 0-100 |
-| `live_mid_level` | Mid frequencies (1-4kHz) | 0-100 |
-| `live_high_level` | High frequencies (4-10kHz) | 0-100 |
-| `live_peak_level` | Peak amplitude | 0-100 |
-| `live_rms_level` | RMS signal level | 0-100 |
-| `live_total_energy` | Total spectral energy | Float |
-| `live_fft_counter` | FFT execution count | Integer |
 
 ---
 
 ## 🎓 Educational Value
 
 ### Concepts Demonstrated:
-1. **Real-time DSP**: FFT computation within hard real-time constraints
-2. **Efficient Memory Management**: Ping-pong DMA buffering
-3. **Signal Processing Theory**: Windowing, DC removal, spectral analysis
-4. **Embedded Optimization**: ARM SIMD instructions, cache management
-5. **Professional Debugging**: ITM telemetry, live variable monitoring
-
-### Learning Resources:
-- [ARM CMSIS-DSP Documentation](https://arm-software.github.io/CMSIS_5/DSP/html/index.html)
-- [I2S Protocol Guide](https://www.nxp.com/docs/en/user-guide/UM10732.pdf)
-- [FFT Windowing Tutorial](https://download.ni.com/evaluation/pxi/Understanding%20FFTs%20and%20Windowing.pdf)
-
----
-
-## 🤝 Contributing
-
-Contributions are welcome! Here's how you can help:
-
-1. **Report Bugs**: Open an issue with reproduction steps
-2. **Suggest Features**: Describe your audio processing use case
-3. **Submit Pull Requests**: 
-   - Fork the repository
-   - Create a feature branch
-   - Add your improvements
-   - Submit a PR with clear description
-
-### Contribution Guidelines:
-- Follow existing code style (comments, formatting)
-- Test on real hardware before submitting
-- Update documentation for new features
-- Provide performance benchmarks where applicable
+1. **Real-time DSP** – Audio processing within hard real-time constraints
+2. **Adaptive Filtering** – FxLMS algorithm and secondary path estimation
+3. **Efficient Memory Management** – Ping-pong DMA buffering, DTCM placement
+4. **Signal Processing Theory** – Windowing, DC removal, FFT, spectral analysis
+5. **Embedded Optimization** – ARM SIMD instructions, O3 compiler flags, cache alignment
+6. **Professional Debugging** – ITM telemetry, live variable monitoring, state reporting
+7. **Modular Firmware Design** – Separated config, DSP utils, analysis, and core layers
 
 ---
 
 ## 📜 License
 
-This project is licensed under the **MIT License** - see the [LICENSE](LICENSE) file for details.
+This project is licensed under the **MIT License** — see the [LICENSE](LICENSE) file for details.
 
 You are free to:
 - ✅ Use commercially
@@ -182,48 +194,21 @@ You are free to:
 - ✅ Use in private projects
 - ✅ Sublicense
 
-**Attribution appreciated but not required!**
-
 ---
 
 ## 🙏 Acknowledgments
 
-- **STMicroelectronics** for excellent HAL libraries
+- **STMicroelectronics** for excellent HAL and BSP libraries
 - **ARM** for CMSIS-DSP optimized functions
-- **Open-source community** for inspiration and support
+- **Open-source embedded audio community** for algorithm references and inspiration
 
 ---
 
 ## 📧 Contact
 
-**Author**: [Your Name]  
+**Author**: Bertan Kuzeyli  
 **Email**: [Your Email]  
-**GitHub**: [@YourUsername](https://github.com/YourUsername)  
-**LinkedIn**: [Your Profile](https://linkedin.com/in/yourprofile)
-
----
-
-## 🔮 Roadmap
-
-### Coming Soon:
-- [ ] Audio Gain Booster project
-- [ ] Active Noise Cancellation (ANC) system
-- [ ] Python visualization tools
-- [ ] MATLAB integration examples
-- [ ] Performance optimization guides
-
-### Future Ideas:
-- Audio effects (reverb, EQ, compressor)
-- Voice activity detection
-- Musical note detection
-- Audio streaming over network
-
----
-
-## ⭐ Star This Repository!
-
-If you find this project useful, please consider giving it a star ⭐  
-It helps others discover these learning resources!
+**GitHub**: [@YourUsername](https://github.com/YourUsername)
 
 ---
 
@@ -231,8 +216,13 @@ It helps others discover these learning resources!
 
 **Built with ❤️ for the embedded audio community**
 
-[Report Bug](https://github.com/YourUsername/STM32-Audio-Processing-Suite/issues) · 
-[Request Feature](https://github.com/YourUsername/STM32-Audio-Processing-Suite/issues) · 
+[Report Bug](https://github.com/YourUsername/STM32-Audio-Processing-Suite/issues) ·
 [Documentation](https://github.com/YourUsername/STM32-Audio-Processing-Suite/wiki)
 
 </div>
+
+---
+
+**Last Updated**: March 2026  
+**Tested On**: STM32H723ZG-NUCLEO Board  
+**IDE Version**: STM32CubeIDE 1.12.0
