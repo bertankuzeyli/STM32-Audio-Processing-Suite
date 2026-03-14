@@ -249,4 +249,4 @@ Enable ITM Stimulus Ports 1-5
 
 **Last Updated**: March 2026  
 **Tested On**: STM32H723ZG-NUCLEO Board  
-**IDE Version**: STM32CubeIDE 1.12.0
+**IDE Version**: STM32CubeIDE 1.19.0
