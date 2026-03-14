@@ -4,19 +4,19 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Platform](https://img.shields.io/badge/Platform-STM32H7-green.svg)](https://www.st.com/en/microcontrollers-microprocessors/stm32h7-series.html)
 
-A collection of professional-grade audio processing projects for STM32H7 microcontrollers, featuring real-time DSP algorithms, I2S audio interfacing, and advanced signal analysis.
+A collection of audio processing projects for STM32H7 microcontrollers, featuring real-time DSP algorithms, I2S audio interfacing, and signal analysis.
 
 ---
 
 ## 🎯 Project Overview
 
-This repository contains three complete audio processing projects demonstrating:
+This repository contains three audio processing projects demonstrating:
 - **Real-time signal processing** using ARM CMSIS-DSP
 - **High-performance I2S audio acquisition** at 48kHz/24-bit
 - **DMA-based zero-copy buffer management** for continuous streaming
 - **FFT-based frequency analysis** with live visualization
 - **Adaptive noise cancellation** using the FxLMS algorithm
-- **Professional modular embedded software architecture**
+- **Modular embedded software architecture**
 
 ---
 
@@ -31,7 +31,7 @@ STM32-Audio-Processing-Suite/
 ├── 02-Real-Time-FFT-Analyzer/     ✅ Complete
 │   └── Real-time spectrum analysis with ITM telemetry
 │
-└── 03-Active-Noise-Cancellation/  ✅ Complete
+└── 03-Active-Noise-Cancellation/  ⚠️ Work in Progress
     └── Adaptive FxLMS noise cancellation with FFT frequency locking
 ```
 
@@ -48,33 +48,27 @@ A real-time audio amplifier that captures microphone input, removes DC offset, a
 - 🔁 **Ping-pong DMA buffering** for zero-gap audio streaming
 - 📡 **Optional USB CDC streaming** for PC-side monitoring
 
-### Performance Metrics:
-- **Processing Time**: ~100–150μs per block
-- **CPU Usage**: ~28% at 550MHz
-- **Sample Rate**: 48kHz
-- **Block Latency**: ~166μs
-
 [➡️ View Full Documentation](01-Audio-Gain-Booster/README.md)
 
 ---
 
 ## 🚀 Project 02 — Real-Time FFT Analyzer
 
-A high-performance audio spectrum analyzer that processes audio in real-time and provides frequency band analysis via ITM telemetry.
+A real-time audio spectrum analyzer that processes audio and provides frequency band analysis via ITM telemetry.
 
 ### Key Features:
 - ⚡ **256-point FFT** using ARM CMSIS-DSP (hardware-optimized)
-- 🎚️ **Frequency band analysis**: Bass (0–1kHz), Mid (1–4kHz), High (4–10kHz)
-- 📊 **Live monitoring** via ITM (Instrumentation Trace Macrocell)
+- 🎚️ **Frequency band analysis** based on define-configurable bin boundaries:
+  - Bass: bins 0–8 → **0–1000 Hz**
+  - Mid: bins 8–32 → **1000–4000 Hz**
+  - High: bins 32–80 → **4000–10000 Hz**
+- 📊 **Frequency resolution**: 125 Hz/bin (32kHz sample rate ÷ 256 points)
+- 📡 **Live monitoring** via ITM (Instrumentation Trace Macrocell) — ports 1–5
 - 🔊 **Peak and RMS level detection**
-- 🎛️ **DC offset removal** with high-pass filtering
+- 🎛️ **DC offset removal** via high-pass filter (`HPF_ALPHA = 0.996`)
 - 📈 **Hamming windowing** for spectral leakage reduction
 
-### Performance Metrics:
-- **Processing Time**: ~2–3ms per FFT frame
-- **CPU Usage**: <50% at 550MHz
-- **Sample Rate**: 32kHz
-- **Frequency Resolution**: 125Hz per bin
+> **Note**: All frequency band boundaries (`BASS_END`, `MID_END`, `HIGH_END`) and `FFT_SIZE` are defined as compile-time constants and can be freely adjusted for different use cases.
 
 [➡️ View Full Documentation](02-Real-Time-FFT-Analyzer/README.md)
 
@@ -82,21 +76,63 @@ A high-performance audio spectrum analyzer that processes audio in real-time and
 
 ## 🚀 Project 03 — Active Noise Cancellation (ANC)
 
-A complete adaptive noise cancellation system using the FxLMS algorithm. The system automatically calibrates the secondary path, locks onto dominant noise frequencies via FFT analysis, and generates anti-noise in real time.
+A narrowband virtual feedback ANC system using the FxLMS algorithm. The system uses a **single microphone pointed at the speaker** (feedback topology — no separate reference microphone) and targets only the dominant noise frequency detected via FFT, rather than attempting broadband cancellation.
+
+### System Architecture
+
+#### Topology: Narrowband Virtual Feedback
+The design uses a **virtual feedback** approach: there is only one microphone, facing the speaker. The error signal is not measured by a separate error mic but is derived from the same feedback microphone. This makes the system a single-sensor, single-channel (1×1) narrowband ANC. The FxLMS filter adapts only around the dominant frequency bin identified by the FFT stage, keeping computational load low and the adaptive filter focused.
+
+#### State Machine Operation
+The system runs as a cyclic state machine. On every power-on or reset, it starts from the beginning:
+
+```
+ ┌─────────────────────────────────────────────────────┐
+ │                    POWER ON / RESET                 │
+ └───────────────────────┬─────────────────────────────┘
+                         │
+                         ▼
+              ┌─────────────────────┐
+              │   CALIBRATION       │  White noise injected into speaker.
+              │  (Secondary Path    │  Microphone captures the response.
+              │   Modeling)         │  FxLMS estimates the S(z) path.
+              └──────────┬──────────┘
+                         │  Calibration complete (~2.67s / 128k samples)
+                         ▼
+              ┌─────────────────────┐
+              │    FFT LOCK         │  FFT analysis of incoming audio.
+              │  (Dominant Freq.    │  Dominant frequency bin identified.
+              │   Detection)        │  Narrowband filter tuned to target.
+              └──────────┬──────────┘
+                         │
+                         ▼
+              ┌─────────────────────┐
+              │    ACTIVE ANC       │  FxLMS filter runs in real time.
+              │                     │  Anti-noise generated and output.
+              └──────────┬──────────┘
+                         │  Periodic re-lock (FFT re-runs)
+                         ▼
+                    (back to FFT LOCK — loops until power-off)
+```
+
+On power-off and restart, the full sequence begins again from **CALIBRATION**, as the secondary path model is not stored persistently.
 
 ### Key Features:
-- 🧠 **FxLMS adaptive filter** with secondary path modeling
-- 🔍 **Automatic frequency locking** via FFT dominant frequency detection
-- 🔧 **3-phase operation**: Warm-up → Calibration → Active ANC
-- 🛡️ **Safety clamping** to prevent filter coefficient explosion
-- 📡 **SWV/ITM live reporting** for real-time state monitoring
-- 🔄 **Modular architecture**: separate DSP, analysis, and core modules
+- 🧠 **FxLMS adaptive filter** with online secondary path modeling
+- 🎯 **Narrowband targeting** — adapts only around the FFT-detected dominant frequency
+- 🔁 **Virtual feedback topology** — single microphone, no reference mic required
+- 🔄 **Cyclic state machine**: CALIBRATION → FFT_LOCK → ACTIVE_ANC → FFT_LOCK → ...
+- 🛡️ **Safety clamping** to prevent filter coefficient divergence
+- 📡 **SWV/ITM live state reporting** — current state visible in real time via ITM ports
+- 🔧 **Modular architecture**: separate DSP, analysis, and core modules
 
-### Performance Metrics:
-- **Processing Time**: ~150–200μs per block
-- **Sample Rate**: 48kHz
-- **Filter Length**: Configurable (ANC_FILTER_LENGTH)
-- **Calibration Duration**: ~2.67 seconds (128000 samples)
+### ⚠️ Current Status — Work in Progress
+
+Hardware testing was performed using an **STM32H723ZG NUCLEO board**, an I2S MEMS microphone, an I2S DAC module, and a **Logitech Z323 speaker** as the noise source. All state machine phases run correctly at the firmware level — secondary path calibration completes, FFT frequency locking works, and the active ANC stage executes — however, **effective noise suppression has not yet been achieved** in the physical setup.
+
+The working hypothesis is that the limitations stem from the acoustic constraints of the virtual feedback topology: with a single microphone also picking up the anti-noise output, the feedback path creates conditions that are difficult to stabilize in a real room environment without careful acoustic isolation. Secondary path estimation accuracy under these conditions may also be insufficient.
+
+Contributions, suggestions, or insights from anyone with single-microphone or virtual feedback ANC experience are very welcome.
 
 [➡️ View Full Documentation](03-Active-Noise-Cancellation/README.md)
 
@@ -145,7 +181,7 @@ A complete adaptive noise cancellation system using the FxLMS algorithm. The sys
 
 ### 1. Clone the Repository:
 ```bash
-git clone https://github.com/YourUsername/STM32-Audio-Processing-Suite.git
+git clone https://github.com/bertankuzeyli/STM32-Audio-Processing-Suite.git
 cd STM32-Audio-Processing-Suite
 ```
 
@@ -184,18 +220,6 @@ Enable ITM Stimulus Ports 1-5
 
 ---
 
-## 📜 License
-
-This project is licensed under the **MIT License** — see the [LICENSE](LICENSE) file for details.
-
-You are free to:
-- ✅ Use commercially
-- ✅ Modify and distribute
-- ✅ Use in private projects
-- ✅ Sublicense
-
----
-
 ## 🙏 Acknowledgments
 
 - **STMicroelectronics** for excellent HAL and BSP libraries
@@ -207,8 +231,8 @@ You are free to:
 ## 📧 Contact
 
 **Author**: Bertan Kuzeyli  
-**Email**: [Your Email]  
-**GitHub**: [@YourUsername](https://github.com/YourUsername)
+**Email**: bertankuzeyli@gmail.com  
+**GitHub**: [@bertankuzeyli](https://github.com/bertankuzeyli)
 
 ---
 
@@ -216,8 +240,8 @@ You are free to:
 
 **Built with ❤️ for the embedded audio community**
 
-[Report Bug](https://github.com/YourUsername/STM32-Audio-Processing-Suite/issues) ·
-[Documentation](https://github.com/YourUsername/STM32-Audio-Processing-Suite/wiki)
+[Report Bug](https://github.com/bertankuzeyli/STM32-Audio-Processing-Suite/issues) ·
+[Documentation](https://github.com/bertankuzeyli/STM32-Audio-Processing-Suite/wiki)
 
 </div>
 
