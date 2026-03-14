@@ -86,34 +86,13 @@ The design uses a **virtual feedback** approach: there is only one microphone, f
 #### State Machine Operation
 The system runs as a cyclic state machine. On every power-on or reset, it starts from the beginning:
 
-```
- ┌─────────────────────────────────────────────────────┐
- │                    POWER ON / RESET                 │
- └───────────────────────┬─────────────────────────────┘
-                         │
-                         ▼
-              ┌─────────────────────┐
-              │   CALIBRATION       │  White noise injected into speaker.
-              │  (Secondary Path    │  Microphone captures the response.
-              │   Modeling)         │  FxLMS estimates the S(z) path.
-              └──────────┬──────────┘
-                         │  Calibration complete (~2.67s / 128k samples)
-                         ▼
-              ┌─────────────────────┐
-              │    FFT LOCK         │  FFT analysis of incoming audio.
-              │  (Dominant Freq.    │  Dominant frequency bin identified.
-              │   Detection)        │  Narrowband filter tuned to target.
-              └──────────┬──────────┘
-                         │
-                         ▼
-              ┌─────────────────────┐
-              │    ACTIVE ANC       │  FxLMS filter runs in real time.
-              │                     │  Anti-noise generated and output.
-              └──────────┬──────────┘
-                         │  Periodic re-lock (FFT re-runs)
-                         ▼
-                    (back to FFT LOCK — loops until power-off)
-```
+| Step | State | Description |
+|------|-------|-------------|
+| 1 | **CALIBRATION** | Runs once on every power-on. White noise is injected into the speaker; the microphone captures the acoustic response and FxLMS estimates the secondary path S(z). Takes ~2.67s (128k samples). |
+| 2 | **FFT LOCK** | FFT analysis of incoming audio. Dominant frequency bin is identified and the narrowband filter is tuned to that target. |
+| 3 | **ACTIVE ANC** | FxLMS filter runs in real time. Anti-noise is generated and output via DAC. |
+| ↺ | **Loop** | After ACTIVE ANC, the system returns to FFT LOCK and re-analyzes the dominant frequency. Steps 2 and 3 repeat continuously until power-off. |
+| ⚡ | **Power-off / Reset** | The entire sequence restarts from CALIBRATION. The secondary path model is not stored persistently. |
 
 On power-off and restart, the full sequence begins again from **CALIBRATION**, as the secondary path model is not stored persistently.
 
